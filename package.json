@@ -1,0 +1,16 @@
+{
+  "name": "horror-tunnel-relay",
+  "version": "1.0.0",
+  "description": "Remote access relay for the Robotic Horror Tunnel (ESP32-S3 scenario based horror tunnel controller). Author: Ali Tehrani - 09303702721",
+  "main": "relay.js",
+  "private": true,
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
