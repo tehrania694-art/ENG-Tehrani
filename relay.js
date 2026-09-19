@@ -82,16 +82,36 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (path === '/app' || path.startsWith('/app/')) {
-    const code = url.searchParams.get('room') || '';
-    if (!code) return json(res, 400, { ok: false, error: 'room parameter is missing' });
-    let target = req.url.replace(/^\/app/, '');
-    if (target === '' || target === '/') target = '/';
+    // TWO address forms are accepted, because both are natural to type:
+    //     /app/?room=eng01        (query form)
+    //     /app/eng01              (short form - what the operator usually types)
+    // The short form used to answer "room parameter is missing", which is
+    // exactly the error that was reported from the field.
+    let code = url.searchParams.get('room') || '';
+    let rest = path.replace(/^\/app/, '');
+    const segs = rest.split('/').filter(Boolean);
+    if (segs.length && segs[0] !== 'api' && segs[0] !== 'ws' && segs[0] !== 'health') {
+      if (!code) code = decodeURIComponent(segs[0]);
+      if (segs[0] === code || decodeURIComponent(segs[0]) === code) {
+        rest = rest.substring(rest.indexOf(segs[0]) + segs[0].length);
+      }
+    }
+    if (!code) {
+      return json(res, 400, {
+        ok: false,
+        error: 'room parameter is missing',
+        hint: 'Use /app/YOUR_ROOM or /app/?room=YOUR_ROOM - for example /app/eng01'
+      });
+    }
+    let target = rest === '' ? '/' : rest;
+    if (!target.startsWith('/')) target = '/' + target;
+    target += url.search || '';          // keep ?t=... and everything else
     const body = await readBody(req);
     return proxyToBoard(req, res, code, target, body);
   }
 
   res.writeHead(404, { 'content-type': 'text/plain' });
-  res.end('Not found. Use /app/?room=YOUR_ROOM');
+  res.end('Not found. Use /app/YOUR_ROOM (for example /app/eng01) or /app/?room=YOUR_ROOM');
 });
 
 function json(res, status, obj) {
@@ -127,7 +147,8 @@ table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #2b3542;
 <p>This relay gives your boards a public address without port forwarding, VPN or router changes.</p>
 <ol>
 <li>On every board open <b>Connection</b>, enable remote access and fill in this host, port ${PORT} and a room code.</li>
-<li>Open the dashboard of a room with <code>/app/?room=ROOM</code>.</li>
+<li>Open the dashboard of a room with <code>/app/ROOM</code> or <code>/app/?room=ROOM</code>.</li>
+<li>Both forms work; the room code is the only secret, so keep it long.</li>
 <li>The room code is the only secret - use a long random value.</li>
 </ol>
 <h2>Rooms currently known</h2>
